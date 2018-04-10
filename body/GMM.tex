@@ -1,0 +1,372 @@
+% !Mode:: "TeX:UTF-8"
+
+\section{GMM}
+
+高斯混合模型的定义为若干高斯模型的线性加权，如下：
+\begin{displaymath}
+\begin{split}
+&p(z_k)=\pi_k\\
+&p(x_{i}|z_k)=\mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k) = 
+\frac{exp\Big{\{}
+-\frac{1}{2}(x_i-\mu_k)^T\varSigma_k^{-1}(x_i-\mu_k)
+\Big{\}}}{(2\pi)^{\frac{D}{2}}|\varSigma_k|^{\frac{1}{2}}} 
+\\
+&p(x_{i})=\sum_{k}^{K}{p(z_k)}p(x_{i}|z_k)=\sum_{k=1}^{K}\pi_k\mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_K)\\
+&p(z_k|x_{i})
+=\frac{p(z_k)p(x_{i}|z_k)}{\sum_{k'=1}^{K}p(z_{k'})p(x_{i}|z_{k'})} =\frac{
+\pi_k\mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)
+}{
+\sum_{k'=1}^{K}\pi_{k'}\mathcal{N}(x_{i}|\mathbf{\mu}_{k'},\mathbf{\varSigma}_{k'})
+}
+\end{split}
+\end{displaymath}
+
+观测样本$\mathbf{x}$的对数似然函数为：
+\begin{displaymath}
+\begin{split}
+\log p(\mathbf{x}) &=\log \Big{\{} \prod_{i=1}^N{p(x_i)}\Big{\}}\\
+&=\sum_{i=1}^{N} \log \Bigg{\{} \sum_{k=1}^{K}\{p(x_i,z_k)\}
+\Bigg{\}}\\
+&=\sum_{i=1}^{N} \log \Bigg{\{} \sum_{k=1}^{K}\{\mathcal{Q}(z_k)\frac{p(x_i,z_k)}{\mathcal{Q}(z_k)}\} \Bigg{\}}\\
+&\geq \sum_{i=1}^{N} \sum_{k=1}^{K} \Bigg{\{}
+\mathcal{Q}(z_k) \log \{ \frac{p(x_i,z_k)} {\mathcal{Q}(z_k)}  \}
+\Bigg{\}}\\
+\end{split}
+\end{displaymath}
+
+Jessen不等式成立的条件是对每个不同的$i$，$\frac{p(x_i,z_k)} {\mathcal{Q}(z_k)} $为常数
+$C_i$，故$p(x_i,z_k) =C_i \times \mathcal{Q}(z_k)$:
+
+\begin{displaymath}
+\begin{split}
+\sum_{k=1}^{K}p(x_i,z_k) =C_i \times \sum_{k=1}^{K}\mathcal{Q}(z_k)
+&\Longrightarrow C_i = \sum_{k=1}^{K}p(x_i,z_k) = p(x_i) \\
+\mathcal{Q}(z_k) = \frac{p(x_i,z_k)}{p(x_i)} &= p(z_k|x_i) = w_{k,i}
+\end{split}
+\end{displaymath}
+故而得到E步的更新公式为：
+\begin{displaymath}
+\begin{split}
+\mathcal{Q}(z_k) &= w_{k,i} = p(z_k|x_i)\\
+&= \frac{
+\pi_k\mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)
+}{
+\sum_{k'=1}^{K}\pi_{k'}\mathcal{N}(x_{i}|\mathbf{\mu}_{k'},\mathbf{\varSigma}_{k'})
+}
+\end{split}
+\end{displaymath}
+
+我们现在最大化由Jessen不等式得到的下界：
+\begin{displaymath}
+\begin{split}
+max \Bigg{\{} 
+\sum_{i=1}^{N} \sum_{k=1}^{K} \Bigg{\{}
+w_{k,i} \log \{ \frac{p(x_i,z_k)} {w_{k,i}}  \}
+\Bigg{\}}
+\end{split}
+\end{displaymath}
+subject to:
+\begin{displaymath}
+\sum_{k=1}^{K}{\pi_k} = 1
+\end{displaymath}
+
+引入拉格朗日算子得：
+\begin{displaymath}
+\begin{split}
+&\mathop{\arg\max}_{\pi,\mu, \varSigma} \Bigg{\{} 
+\sum_{i=1}^{N} \sum_{k=1}^{K} \Bigg{\{}
+w_{k,i} \log \{ \frac{p(x_i,z_k)} {w_{k,i}}  \}
+-\lambda \Big{\{} \sum_{k=1}^{K}{\pi_k}-1 \Big{\}}
+\Bigg{\}}\\
+&=\mathop{\arg\max}_{\pi,\mu, \varSigma} \Bigg{\{} 
+\sum_{i=1}^{N} \sum_{k=1}^{K} \Bigg{\{}
+w_{k,i} \log \{ \frac{p(x_i|z_k)p(z_k)} {w_{k,i}}  \}
+-\lambda \Big{\{} \sum_{k=1}^{K}{\pi_k}-1 \Big{\}}
+\Bigg{\}}\\
+&=\mathop{\arg\max}_{\pi,\mu, \varSigma} \Bigg{\{} 
+\sum_{i=1}^{N} \sum_{k=1}^{K} 
+\Bigg{\{}
+w_{k,i} \log \{ \frac{\pi_k \mathcal{N}(x_{i}|\mu_k,\varSigma_k)} {w_{k,i}}  \}
+-\lambda \Big{\{} \sum_{k=1}^{K}{\pi_k}-1 \Big{\}}
+\Bigg{\}}\\
+&=\mathop{\arg\max}_{\pi,\mu, \varSigma} \Bigg{\{} 
+\sum_{i=1}^{N} \sum_{k=1}^{K} 
+\Bigg{\{}
+w_{k,i} \{ 
+\log{\pi_k} + \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)}-\log{w_{k,i}}  
+\}
+-\lambda \Big{\{} \sum_{k=1}^{K}{\pi_k}-1 
+\Big{\}}
+\Bigg{\}}\\
+&=\mathop{\arg\max}_{\pi,\mu, \varSigma} \Bigg{\{} 
+\sum_{i=1}^{N} \sum_{k=1}^{K} 
+\Bigg{\{}
+w_{k,i} \{ 
+\log{\pi_k} + \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\}
+-\lambda \sum_{k=1}^{K}{\pi_k} 
+\Bigg{\}}\\
+\end{split}
+\end{displaymath}
+
+对$\pi_k$求导为0得：
+\begin{displaymath}
+\begin{split}
+&\frac{\sum_{i=1}^{N}{w_{k,i}}}{\pi_k}-\lambda = 0\\
+\Longrightarrow & \sum_{k=1}^{K} \sum_{i=1}^{N} {w_{k,i}} =
+\sum_{k=1}^{K}{\lambda \pi_k}\\
+\Longrightarrow & \lambda = \sum_{k=1}^{K} \sum_{i=1}^{N} {w_{k,i}} =
+N\\
+\Longrightarrow & \pi_k = \frac{1}{N}\sum_{i=1}^{N}{w_{k,i}}
+\end{split}
+\end{displaymath}
+
+
+令 $C=exp\{-\frac{1}{2}(x_i-\mu_k)\varSigma_k^{-1}(x_i-\mu_k)^T\}$，则：
+\begin{displaymath}
+\begin{split}
+&\frac{dC}{d\mu_k} = C \varSigma_k^{-1}(x_i-\mu_k)^T\\
+&\frac{d \mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)}{d\mu_k} = \mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k) \varSigma_k^{-1}(x_i-\mu_k)^T\\
+\end{split}
+\end{displaymath}
+
+
+
+对$\mu_k$求导为0得：
+\begin{displaymath}
+\begin{split}
+&\frac{
+\delta{ \Bigg{(}
+\sum_{i=1}^{N} \sum_{k=1}^{K} 
+\Bigg{\{}
+w_{k,i} \{ 
+\log{\pi_k} + \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\}
+-\lambda \sum_{k=1}^{K}{\pi_k} \Bigg{\}} \Bigg{)}
+}}{\delta{\mu_k}} = 0\\
+\Longrightarrow& \frac{
+\delta{ \Bigg{(}
+\sum_{i=1}^{N} \sum_{k=1}^{K} 
+\Bigg{\{}
+w_{k,i} \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}} \Bigg{)}
+}}{\delta{\mu_k}} = 0\\
+\Longrightarrow& \frac{
+\delta{ \Bigg{(}
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i} \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}} \Bigg{)}
+}}{\delta{\mu_k}} = 0\\
+\Longrightarrow& 
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i} 
+\frac{
+      \frac{
+           \delta(  \mathcal{N}(x_{i}|\mu_k,\varSigma_k)  )
+           }{\delta{\mu_k}}
+}
+{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}}
+ = 0\\
+\end{split}
+\end{displaymath}
+
+由于 $b\frac{d
+  \mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)}{d\mu_k} =
+\mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)
+\varSigma_k^{-1}(x_i-\mu_k)^T$：
+\begin{displaymath}
+\begin{split}
+\Longrightarrow& 
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i} 
+\frac{
+ \mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k) \varSigma_k^{-1}(x_i-\mu_k)^T
+}
+{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}}
+ = 0\\
+\Longrightarrow& 
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i}  \varSigma_k^{-1}(x_i-\mu_k)^T
+\Bigg{\}}
+ = 0\\
+\Longrightarrow& 
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i}(x_i-\mu_k)
+\Bigg{\}}
+ = 0\\
+\Longrightarrow& 
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i}x_i
+\Bigg{\}}
+ = \sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i}\mu_k
+\Bigg{\}}\\
+\Longrightarrow& 
+\mu_k = \frac{
+\sum_{i=1}^{N}  w_{k,i}x_i 
+}{ 
+\sum_{i=1}^{N} w_{k,i}
+}\\
+\end{split}
+\end{displaymath}
+
+
+先列几个下边会用到的求导公式：
+\begin{displaymath}
+\begin{split}
+&\frac{d|M|}{dM} = |M|(M^{-1})^T\\
+&\frac{\delta(a^TMb)}{dM} = ab^T\\
+\end{split}
+\end{displaymath}
+
+令 $C=exp\{-\frac{1}{2}(x_i-\mu_k)\varSigma_k^{-1}(x_i-\mu_k)^T\}$，则：
+\begin{displaymath}
+\begin{split}
+\frac{dC}{d\varSigma_k^{-1}} &= C (-\frac{1}{2})(x_i-\mu_k)(x_i-\mu_k)^T\\
+\frac{d
+  \mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)}{d\varSigma_k^{-1}}
+&= \frac{C}{(2\pi)^{\frac{D}{2}}}
+\frac{\delta{(|\varSigma_k^{-1}|^{\frac{1}{2}})}}{\delta{\varSigma_k^{-1}}}
++ \frac{|\varSigma_k^{-1}|^{\frac{1}{2}}}{(2\pi)^{\frac{D}{2}}}
+\frac{\delta{C}}{\delta{\varSigma_k^{-1}}}
+\\
+&= \frac{C}{(2\pi)^{\frac{D}{2}}}
+\frac{|\varSigma_k^{-1}|^{-\frac{1}{2}}|\varSigma_k^{-1}|\varSigma_k}{2}
++ \frac{|\varSigma_k^{-1}|^{\frac{1}{2}}}{(2\pi)^{\frac{D}{2}}}
+ C (-\frac{1}{2})(x_i-\mu_k)(x_i-\mu_k)^T
+\\
+&= \frac{C|\varSigma_k^{-1}|^{\frac{1}{2}}\varSigma_k}{2(2\pi)^{\frac{D}{2}}}
+- \frac{C|\varSigma_k^{-1}|^{\frac{1}{2}}(x_i-\mu_k)(x_i-\mu_k)^T}
+{2(2\pi)^{\frac{D}{2}}}
+\\
+&= \frac{C|\varSigma_k^{-1}|^{\frac{1}{2}} 
+(\varSigma_k - (x_i-\mu_k)(x_i-\mu_k)^T)
+}{2(2\pi)^{\frac{D}{2}}}
+\\
+&=  \frac{1}{2}\mathcal{N}(x_{i}|\mu_k,\varSigma_k)
+(\varSigma_k - (x_i-\mu_k)(x_i-\mu_k)^T)
+\\
+\end{split}
+\end{displaymath}
+
+对$\varSigma_k$求导为0得：
+\begin{displaymath}
+\begin{split}
+&\frac{
+\delta{ \Bigg{(}
+\sum_{i=1}^{N} \sum_{k=1}^{K} 
+\Bigg{\{}
+w_{k,i} \{ 
+\log{\pi_k} + \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\}
+-\lambda \sum_{k=1}^{K}{\pi_k} \Bigg{\}} \Bigg{)}
+}}{\delta{\varSigma_k}} = 0\\
+\Longrightarrow& \frac{
+\delta{ \Bigg{(}
+\sum_{i=1}^{N} \sum_{k=1}^{K} 
+\Bigg{\{}
+w_{k,i} \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}} \Bigg{)}
+}}{\delta{\varSigma_k}} = 0
+\end{split}
+\end{displaymath}
+
+\begin{displaymath}
+\begin{split}
+\Longrightarrow& \frac{
+\delta{ \Bigg{(}
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i} \log{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}} \Bigg{)}
+}}{\delta{\varSigma_k}} = 0 \\
+\Longrightarrow &
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i} 
+\frac{
+      \frac{
+           \delta(  \mathcal{N}(x_{i}|\mu_k,\varSigma_k)  )
+           }{\delta{\varSigma_k}}
+}
+{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}}
+ = 0\\
+\end{split}
+\end{displaymath}
+
+由于 $b\frac{d
+  \mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)}{d\varSigma_k} =
+ \frac{1}{2}\mathcal{N}(x_{i}|\mu_k,\varSigma_k)
+(\varSigma_k - (x_i-\mu_k)(x_i-\mu_k)^T)$：
+\begin{displaymath}
+\begin{split}
+\Longrightarrow& 
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i} 
+\frac{
+\frac{1}{2}\mathcal{N}(x_{i}|\mu_k,\varSigma_k)
+(\varSigma_k - (x_i-\mu_k)(x_i-\mu_k)^T)
+}
+{\mathcal{N}(x_{i}|\mu_k,\varSigma_k)} 
+\Bigg{\}}
+ = 0\\
+\Longrightarrow& 
+\sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i}\varSigma_k
+\Bigg{\}}
+ = \sum_{i=1}^{N}
+\Bigg{\{}
+w_{k,i}(x_i-\mu_k)(x_i-\mu_k)^T
+\Bigg{\}}
+\\
+\Longrightarrow& 
+\varSigma_k = \frac{
+\sum_{i=1}^{N}  w_{k,i} (x_i-\mu_k)(x_i-\mu_k)^T
+}{ 
+\sum_{i=1}^{N} w_{k,i}
+}\\
+\end{split}
+\end{displaymath}
+
+综上，GMM模型使用EM进行训练时的步骤为：
+
+E步：选择一个合适的隐状态的分布$\Theta(z_k)$，使得样本$x$的最大似然概率
+等于Jesen不等式得到的下界，即$\frac{p(x_i,z_k)} {\mathcal{Q}(z_k)}$的期望。根据Jesen不等式成立的
+条件，给定样本$\mathbf{x}$和参数$\pi_k, \mu_k, \varSigma_k$的情况下，隐状态的分布为：
+\begin{displaymath}
+w_{k,i} = \frac{
+\pi_k\mathcal{N}(x_{i}|\mathbf{\mu}_k,\mathbf{\varSigma}_k)
+}{
+\sum_{k'=1}^{K}\pi_{k'}\mathcal{N}(x_{i}|\mathbf{\mu}_{k'},\mathbf{\varSigma}_{k'})
+}
+\end{displaymath} 
+
+M步:最大化Jesen不等式得到的下界，来求得参数$\pi_k, \mu_k, \varSigma_k$，即：
+\begin{displaymath}
+\begin{split}
+\pi_k &= \frac{1}{N}\sum_{i=1}^{N}{w_{k,i}}\\
+\mu_k &= \frac{
+\sum_{i=1}^{N}  w_{k,i}x_i 
+}{ 
+\sum_{i=1}^{N} w_{k,i}
+}\\
+\varSigma_k &= \frac{
+\sum_{i=1}^{N}  w_{k,i} (x_i-\mu_k)(x_i-\mu_k)^T
+}{ 
+\sum_{i=1}^{N} w_{k,i}
+}\\
+\end{split}
+\end{displaymath} 
+

@@ -1,0 +1,119 @@
+% !Mode:: "TeX:UTF-8"
+
+\chapter{SVM}
+
+\section{不带松弛因子的SVM}
+样本点$x_i$到直线$y=wx+b$的距离为：
+\begin{displaymath}
+\frac{wx_i+b}{\| w \|}
+\end{displaymath}  
+ 
+样本点$x_i$到直线$y=wx+b$的几何距离为：
+\begin{displaymath}
+\frac{y_i*(wx_i+b)}{\| w \|}
+\end{displaymath} 
+
+不失一般性的假设样本集合中距离分类面$y=wx+b$的距离最小的样本为
+$(x_i,y_i)$，则假设其算术距离为1，即：
+\begin{displaymath}
+y_i*(wx_i+b)=1
+\end{displaymath} 
+
+那么，SVM的优化目标变为：$argmax{\frac{1}{\|w\|}}$
+给定: $min_i(y_i*(wx_i+b)) = 1$
+即: $y_i*(wx_i+b) \geq 1$
+
+又：$argmax{\frac{1}{\|w\|}} = argmin(\frac{1}{2}\|w\|) =
+argmin(\frac{1}{2}w^2)$
+
+有带约束问题的极值：
+\begin{equation}
+argmin(\frac{1}{2}w^2 - \sum_i{\lambda_i(y_i*(wx_i+b)-1)})
+\end{equation} 
+
+其为凸函数，对$w$求导为0得：
+\begin{equation}
+w = \sum_i{\lambda_i(y_i*x_i)}
+\end{equation} 
+
+对$b$求导为0得：
+\begin{equation}
+ \sum_i{\lambda_i*y_i}=0
+\end{equation}
+
+将求得的$w$代入原公式的：
+\begin{equation}
+\begin{split}
+&\frac{1}{2}w^2 - \sum_i{\lambda_i(y_i*(wx_i+b)-1)}\\
+&=\frac{1}{2}(\sum_i{\lambda_i(y_i*x_i)})(\sum_j{\lambda_j(y_j*x_j)}) -
+\sum_i{\lambda_i(y_i*((\sum_i{\lambda_j(y_j*x_j)})x_i+b)-1)}\\
+&=-\frac{1}{2}\sum_i\sum_j{\lambda_i\lambda_jy_iy_jx_ix_j}
+-\sum_i{\lambda_i(y_ib)}+\sum_i{\lambda_i}\\
+&\sum_i{\lambda_i*y_i}=0\\
+&=\sum_i{\lambda_i}-\frac{1}{2}\sum_i\sum_j{\lambda_i\lambda_jy_iy_jx_ix_j}
+\end{split}
+\end{equation}
+
+故原始最优化问题转换为：
+\begin{equation}
+argmin_\lambda{\sum_i{\lambda_i}-\frac{1}{2}\sum_i\sum_j{\lambda_i\lambda_jy_iy_jx_ix_j}}
+\end{equation}
+subject to: $ \sum_i{\lambda_i*y_i}=0$ and $\lambda_i \geq 0$。称为原
+始问题的对偶形式。
+
+该受限极值问题为二次规划问题，可以用 Sequential Minimal Optimization
+(SMO)方法求解。
+
+\section{带松弛因子的SVM}
+为了处理线性不可分的情况，引入松弛变量$\xi \geq 0$,从而允许某些样本点到分类面的函数距离少于1，即
+\begin{equation}
+ y_i*(wx_i+b) \geq 1-\xi_i
+\end{equation}
+注意，每个样本点可选择不同的$\xi$，该参数会被模型优化。
+
+为了使得松弛变量$\xi_i$越小越好，将优化目标变为：
+\begin{displaymath}
+argmin_w{\frac{1}{2}*w^2} + C\sum_i{\xi_i}
+\end{displaymath} 
+
+引入拉格朗日算子，将受限极值转换为非受限极值：
+\begin{equation}
+argmin{\frac{1}{2}w^2  + C\sum_i{\xi_i} -
+\sum_i{\lambda_i(y_i*(wx_i+b)-1+\xi_i)} - \sum_i{\beta_i\xi_i}}
+\end{equation} 
+
+函数为凸，对$w$,$b$,$\xi$求导为0得：
+\begin{equation}
+w = \sum_i{\lambda_i(y_i*x_i)}
+\end{equation} 
+\begin{equation}
+ \sum_i{\lambda_i*y_i}=0
+\end{equation}
+
+\begin{equation}
+C-\lambda_i-\beta_i=0 \Longrightarrow
+C-\lambda_i = \beta_i
+\end{equation}
+
+将求导所得代入原始公式得原始问题的对偶形式：
+\begin{equation}
+argmin_\lambda{\sum_i{\lambda_i}-\frac{1}{2}\sum_i\sum_j{\lambda_i\lambda_jy_iy_jx_ix_j}}
+\end{equation}
+subject to:
+\begin{equation}
+\begin{split} 
+\sum_i{\lambda_i*y_i} &=0\\
+\lambda_i &\geq 0 \\
+\left\{
+\begin{aligned}
+ C-\lambda_i &=& \beta_i\\
+\beta_i &\geq& 0
+\end{aligned}
+\right\}
+\Longrightarrow
+C-\lambda_i \geq 0 \Longrightarrow \lambda_i \leq C
+\end{split}
+\end{equation}
+
+比较引入松弛变量$\xi_i$的最后结果同引入前的相比，差别仅仅在于对
+$\lambda_i$的约束上，最后的模型并没有保留任何松弛变量。

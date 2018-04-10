@@ -1,0 +1,83 @@
+% !Mode:: "TeX:UTF-8"
+
+\section{EM}
+
+
+参数为$\theta$，样本$x_i$的概率为$p(x_i;\theta)$，隐变量为$z$,则最大似
+然为：
+\begin{displaymath}
+\begin{split}
+\ell(\theta) &= \sum_{i=1}^{n}{log(p(x_i;\theta))}\\
+&= \sum_{i=1}^{n}{log(\sum_{z}{p(x_i,z;\theta)})}
+\end{split}
+\end{displaymath} 
+
+令$\Theta(z)$为隐变量$z$的分布，则：
+\begin{displaymath}
+\begin{split}
+\ell(\theta) &= \sum_{i=1}^{n}{log(\sum_{z}{p(x_i,z;\theta)})}\\
+&=
+\sum_{i=1}^{n}{log(\sum_{z}{(\Theta(z)*\frac{p(x_i,z;\theta)}{\Theta(z)}}))}\\
+&\geq \sum_{i=1}^{n}{\sum_{z}{\Theta(z)*log(\frac{p(x_i,z;\theta)}{\Theta(z)}})}
+\end{split}
+\end{displaymath} 
+最后一步为Jesen不等式。有公式可以看到，最大似然$\ell(\theta)$的下界为
+$\frac{p(x_i,z;\theta)}{\Theta(z)}$的期望。
+
+我们可以选择一个合适的隐状态的分布$\Theta(z)$使得不等式的等号成立，根
+据Jesen不等式成立的条件，对每个不同的$i$，$log$内部的$\frac{p(x_i,z;\theta)}{\Theta(z)}$为常数
+$C_i$,即$\frac{p(x_i,z;\theta)}{\Theta(z)}$不随$z$的变化而变化，得：
+$\frac{p(x_i,z;\theta)}{\Theta(z)} = C_i$
+而又有 $\sum_{z}{\Theta(z)}=1$，从而：
+\begin{displaymath}
+\sum_{z}{p(x_i,z;\theta)} = \sum_{z}{\Theta(z)*C_i}
+=C_i
+=p(x_i;\theta)
+\end{displaymath} 
+故而：
+\begin{displaymath}
+\begin{split}
+\Theta(z) &= \frac{p(x_i,z;\theta)}{p(x_i;\theta)}\\
+&=p(z|x_i;\theta)
+\end{split}
+\end{displaymath} 
+即，当隐状态$z$的分布$\Theta(z)$取最大似然估计的结果$p(z|x_i;\theta)$时，
+不等式的等号成立：样本$x$的最大似然概率等于
+$\frac{p(x_i,z;\theta)}{\Theta(z)}$的期望。
+
+目前为止，给定了样本$x$和参数$\theta$，我们可以用最大似然来获得隐状态
+分布$\Theta(z)$，而给定了样本$x$和隐状态的分布$\Theta(z)$，我们又可以
+通过最大化样本的似然概率来获得参数$\theta$。故而，EM训练的过程为:
+
+E步：选择一个合适的隐状态的分布$\Theta(z)$，使得样本$x$的最大似然概率
+等于Jesen不等式得到的下界，即$\frac{p(x_i,z;\theta)}{\Theta(z)}$的期望。根据Jesen不等式成立的
+条件，给定样本$x$和参数$\theta$的情况下，隐状态的分布为：
+\begin{displaymath}
+\Theta(z)=p(z|x_i;\theta)
+\end{displaymath} 
+
+M步:最大化Jesen不等式得到的下界，来求得参数$\theta$，即：
+\begin{displaymath}
+\begin{split}
+\theta &= argmax{\sum_{i=1}^{n}{\sum_{z}{\Theta(z)*log(\frac{p(x_i,z;\theta)}{\Theta(z)}})}}
+\end{split}
+\end{displaymath} 
+
+Jessen不等式理解：令$\frac{p(x_i,z;\theta)}{\Theta(z)} = x_z$,则有：
+\begin{displaymath}
+\begin{split}
+log(\sum_{z}{(\Theta(z)*\frac{p(x_i,z;\theta)}{\Theta(z)}})) &=log(\sum_{z}{(\Theta(z)*x_z}))\\
+&=log(\Theta_{0}x_0 + \Theta_{1}x_1 +\Theta_{2}x_2+...+\Theta_{n}x_n)\\
+&\geq \Theta_0log(x_0) + \Theta_1log(x_1) +\Theta_2log(x_2)+...+\Theta_nlog(x_n)\\
+&=\sum_{z}{\Theta(z)*log(x_z)}\\
+&=\sum_{z}{(\Theta(z)*log(\frac{p(x_i,z;\theta)}{\Theta(z)})})\\
+\end{split}
+\end{displaymath} 
+
+当$x_z=C$，且$sum_{z}{\Theta(z)} = 1$（概率分布的性质）时，
+\begin{displaymath}
+\begin{split}
+log(\sum_{z}{(\Theta(z)*x_z})) = log(1*C) &=log(C)\\
+\sum_{z}{\Theta(z)*log(x_z)} = 1*log(C)&=log(C)
+\end{split}
+\end{displaymath} 

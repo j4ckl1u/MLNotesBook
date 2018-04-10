@@ -1,0 +1,296 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{变分推断(Variational Inference)}
+机器学习中一个重要的任务是需要估计一个后验分布$p(\mathbf{Z}|\mathbf{X})$（比如在EM算的E步），其中$\mathbf{X}$为观测到的数据，$\mathbf{Z}$为隐变量。然而有的时候隐变量$\mathbf{Z}$的后验分布并不是很容易的计算得到。变分推断则是一个近似的计算后验分布的方法。变分推断的基本思路是，首先引入一个简单的容易计算的分布$q(\mathbf{Z})$，然后将原分布$p(\mathbf{X})$转换为分布$q(\mathbf{Z})$的函数，并最大化以$q(\mathbf{Z})$为参数的一个下界ELOB。
+
+\section{对数似然和ELOB下界}
+
+\begin{displaymath}
+\begin{split}
+p(\mathbf{Z} | \mathbf{X}) &= \frac{ p(\mathbf{X}, \mathbf{Z})} { p(\mathbf{X}) }\\
+\ln (p(\mathbf{X})) &= \ln(p(\mathbf{X}, \mathbf{Z})) - \ln(p(\mathbf{Z}|\mathbf{X}))\\
+\ln (p(\mathbf{X})) &= \left [ \ln(p(\mathbf{X}, \mathbf{Z})) -\ln(q(\mathbf{Z})) \right ] - \left [ \ln(p(\mathbf{Z}|\mathbf{X})) - \ln(q(\mathbf{Z})) \right ]\\
+\ln (p(\mathbf{X})) &= \ln(\frac{ p(\mathbf{X}, \mathbf{Z})}{q(\mathbf{Z})}) - \ln( \frac{p(\mathbf{Z}|\mathbf{X})}{q(\mathbf{Z})})
+\end{split}
+\end{displaymath}
+我们对公式两边取$q(\mathbf{Z})$的期望，得：
+\begin{displaymath}
+\begin{split}
+\int{\ln (p(\mathbf{X})) q(\mathbf{Z})} \mathrm{d}\mathbf{Z} &= \int{ \ln(\frac{ p(\mathbf{X}, \mathbf{Z})}{q(\mathbf{Z})}) q(\mathbf{Z})} \mathrm{d}\mathbf{Z}- \int {\ln( \frac{p(\mathbf{Z}|\mathbf{X})}{q(\mathbf{Z})}) q(\mathbf{Z})} \mathrm{d}\mathbf{Z}\\
+\ln(p(\mathbf{X})) &=
+\begin{matrix} 
+\underbrace { 
+\left ( \int{ q(\mathbf{Z}) \ln( p(\mathbf{X}, \mathbf{Z}))} \mathrm{d}\mathbf{Z} -
+ \int{ q(\mathbf{Z}) \ln({q(\mathbf{Z})})} \mathrm{d}\mathbf{Z} \right ) 
+} \\
+\mathcal{L}(q)
+\end{matrix}
++
+\begin{matrix}
+\underbrace{
+ \left ( - \int {q(\mathbf{Z}) \ln( \frac{p(\mathbf{Z}|\mathbf{X})}{q(\mathbf{Z})})} \mathrm{d}\mathbf{Z} \right )
+}\\
+\mathbb{KL}(q\|p)
+\end{matrix}
+\end{split}
+\end{displaymath}
+我们管$\mathcal{L}(q)$叫Evidence Lower Bound(ELOB)。由上式可以看到当$\mathbb{KL}(q\|p)$为0时，$\ln(p(\mathbf{X})) = \mathcal{L}(q) $，此时$q(\mathbf{Z}) = p(\mathbf{Z}|\mathbf{X})$。
+
+另一种证明思路：
+\begin{displaymath}
+\begin{split}
+\ln(p(\mathbf{X})) &= \log \int {p(\mathbf{X}, \mathbf{Z})} \mathrm{d}\mathbf{Z}\\
+&= \log \int {p(\mathbf{X}, \mathbf{Z}) \frac{q(\mathbf{Z})}{q(\mathbf{Z})}} \mathrm{d}\mathbf{Z}\\
+&= \log \int {p(\mathbf{X}, \mathbf{Z}) \frac{q(\mathbf{Z})}{q(\mathbf{Z})}} \mathrm{d}\mathbf{Z}\\
+&\geq \int { q(\mathbf{Z}) \log{\frac{p(\mathbf{X}, \mathbf{Z})}{q(\mathbf{Z})}} } \mathrm{d}\mathbf{Z}\\
+&= \int{ q(\mathbf{Z}) \ln( p(\mathbf{X}, \mathbf{Z}))} \mathrm{d}\mathbf{Z} -  \int{ q(\mathbf{Z}) \ln({q(\mathbf{Z})})} \mathrm{d}\mathbf{Z}\\
+&= \mathcal{L}(q)
+\end{split}
+\end{displaymath}
+其中我们使用了Jesen不等式，由Jesen不等式成立的条件得$\frac{p(\mathbf{X}, \mathbf{Z})}{q(\mathbf{Z})}$为常数（与$\mathbf{Z}$无关），容易证明此时$q(\mathbf{Z}) = p(\mathbf{Z}|\mathbf{X})$。
+
+\section{变分推断（Variational Inference）}
+经过上边的推导，我们发现可以通过最大化ELOB来近似最大化数据的对数似然。很多情况下由于模型太多复杂导致直接最大化ELOB比较困难，变分推断的思路是，我们可以假设一个简单的容易计算的隐变量的分布$q(\mathbf{Z})$，然后训练该简单分布的参数以最大化ELOB。我们可以假设隐变量之间是相互独立的，即$q(\mathbf{Z})=\prod_{i=1}^{M}{q_i(\mathbf{Z}_i)}$。从而ELBO转换为：
+\begin{displaymath}
+\begin{split}
+\mathcal{L}(q) &= \int{ q(\mathbf{Z}) \ln( p(\mathbf{X}, \mathbf{Z}))} \mathrm{d}\mathbf{Z} -  \int{ q(\mathbf{Z}) \ln({q(\mathbf{Z})})} \mathrm{d}\mathbf{Z}\\
+&=
+\begin{matrix} 
+\underbrace { 
+ \int{ \prod_{i=1}^{M}{q_i(\mathbf{Z}_i)} \ln( p(\mathbf{X}, \mathbf{Z}))} \mathrm{d}\mathbf{Z}
+}\\
+\text{Part 1}
+\end{matrix}
+ - 
+\begin{matrix} 
+\underbrace { 
+\int{ \prod_{i=1}^{M}{q_i(\mathbf{Z}_i)} \sum_{i=1}^{M} \ln({q_i(\mathbf{Z}_i)})} \mathrm{d}\mathbf{Z}
+}\\
+\text{Part 2}
+\end{matrix}
+\end{split}
+\end{displaymath}
+
+
+\begin{displaymath}
+\begin{split} 
+\text{Part 1} &=  \int{ \prod_{i=1}^{M}{q_i(\mathbf{Z}_i)} \ln( p(\mathbf{X}, \mathbf{Z}))} \mathrm{d}\mathbf{Z}\\
+&= \int_{\mathbf{Z}_1} \int_{\mathbf{Z}_2} \text{...} \int_{\mathbf{Z}_M} \prod_{i=1}^{M}{q_i(\mathbf{Z}_i)} \ln( p(\mathbf{X}, \mathbf{Z})) \mathrm{d}\mathbf{Z}_1, \mathrm{d}\mathbf{Z}_2 \text{...} \mathrm{d}\mathbf{Z}_M\\
+&= \int_{\mathbf{Z}_j} q_j(\mathbf{Z}_j) \left ( \int \int \text{...} \int_{\mathbf{Z}_{i \neq j}} \prod_{i \neq j}^{M}{q_i(\mathbf{Z}_i)} \ln( p(\mathbf{X}, \mathbf{Z})) \prod_{i \neq j}^{M} \mathrm{d}\mathbf{Z}_i \right ) \mathrm{d} \mathbf{Z}_j\\
+&= \int_{\mathbf{Z}_j} q_j(\mathbf{Z}_j) \left ( \int \int \text{...} \int_{\mathbf{Z}_{i \neq j}}  \ln( p(\mathbf{X}, \mathbf{Z})) \prod_{i \neq j}^{M}{q_i(\mathbf{Z}_i) \mathrm{d}\mathbf{Z}_i} \right ) \mathrm{d} \mathbf{Z}_j\\
+&= \int_{\mathbf{Z}_j} q_j(\mathbf{Z}_j) \left [
+\mathbb{E}_{i \neq j} \left (\ln (p(\mathbf{X}, \mathbf{Z})) \right)
+ \right ] \mathrm{d} \mathbf{Z}_j\\
+\end{split}
+\end{displaymath}
+
+\begin{displaymath}
+\begin{split} 
+\text{Part 2} &= \int{ \prod_{i=1}^{M}{q_i(\mathbf{Z}_i)} \sum_{i=1}^{M} \ln({q_i(\mathbf{Z}_i)})} \mathrm{d}\mathbf{Z}\\
+&=\int_{\mathbf{Z}_1} \int_{\mathbf{Z}_2} \text{...} \int_{\mathbf{Z}_M} 
+\left ( \prod_{i=1}^{M}{q_i(\mathbf{Z}_i)} \sum_{i=1}^{M} \ln({q_i(\mathbf{Z}_i)}) \right )
+ \mathrm{d}\mathbf{Z}_1, \mathrm{d}\mathbf{Z}_2 \text{...} \mathrm{d}\mathbf{Z}_M\\
+&=\int_{\mathbf{Z}_1} q_1(\mathbf{Z}_1) \int_{\mathbf{Z}_2} q_2(\mathbf{Z}_2) \text{...} \int_{\mathbf{Z}_M} q_M(\mathbf{Z}_M) 
+\left ( \sum_{i=1}^{M} \ln({q_i(\mathbf{Z}_i)}) \right )
+ \mathrm{d}\mathbf{Z}_1, \mathrm{d}\mathbf{Z}_2 \text{...} \mathrm{d}\mathbf{Z}_M\\
+&=\sum_{i=1}^{M} \int_{\mathbf{Z}_1} q_1(\mathbf{Z}_1) \int_{\mathbf{Z}_2} q_2(\mathbf{Z}_2) \text{...} \int_{\mathbf{Z}_M} q_M(\mathbf{Z}_M) 
+\left (  \ln({q_i(\mathbf{Z}_i)}) \right )
+ \mathrm{d}\mathbf{Z}_1, \mathrm{d}\mathbf{Z}_2 \text{...} \mathrm{d}\mathbf{Z}_M\\
+&=\sum_{i=1}^{M} \int_{\mathbf{Z}_i} q_i(\mathbf{Z}_i) \ln({q_i(\mathbf{Z}_i)}) \mathrm{d}\mathbf{Z}_i \\
+&= \int_{\mathbf{Z}_j} q_j(\mathbf{Z}_j) \ln({q_j(\mathbf{Z}_j)}) \mathrm{d}\mathbf{Z}_j + \text{const}
+\end{split}
+\end{displaymath}
+
+
+\begin{displaymath}
+\begin{split}
+\mathcal{L}(q) &= \text{Part 1} - \text{Part 2} \\
+&=\int_{\mathbf{Z}_j} q_j(\mathbf{Z}_j) \left [
+\mathbb{E}_{i \neq j} \left (\ln (p(\mathbf{X}, \mathbf{Z})) \right)
+ \right ] \mathrm{d} \mathbf{Z}_j
+-\int_{\mathbf{Z}_j} q_j(\mathbf{Z}_j) \ln({q_j(\mathbf{Z}_j)}) \mathrm{d}\mathbf{Z}_j + \text{const}\\
+\text{let  } & \ln(\tilde{p}_j(\mathbf{X}, \mathbf{Z}_j)) = \mathbb{E}_{i \neq j} \left (\ln (p(\mathbf{X}, \mathbf{Z})) \right) + \text{const} ,\\
+ &=  \int_{\mathbf{Z}_j} q_j(\mathbf{Z}_j)\ln \left (
+ \frac{ \tilde{p}_j(\mathbf{X}, \mathbf{Z}_j)}{q_j(\mathbf{Z}_j)} 
+\right ) \mathrm{d} \mathbf{Z}_j + \text{const}\\
+&= -\int_{\mathbf{Z}_j} \mathbb{KL}(\tilde{p}_j(\mathbf{X}, \mathbf{Z}_j) \| q_j(\mathbf{Z}_j))\mathrm{d} \mathbf{Z}_j + \text{const}
+\end{split}
+\end{displaymath}
+
+由此我们引入的分布$q$中个隐变量是独立的，我们便可以采用一个循环迭代的方法来固定$q_{i \neq j}$而更新隐变量$q_j(\mathbf{Z}_j)$以使得$\mathcal{L}(q)$最大。每次更新不同的$q_j(\mathbf{Z}_j)$都会提高ELOB，从而更好的拟合原分布。然而对$q$的选择的不同可能会影响拟合的程度。由上式我们可以看到最大化$\mathcal{L}(q_j)$等于最小化$ \mathbb{KL}(\tilde{p}_j(\mathbf{X}, \mathbf{Z}_j) \| q_j(\mathbf{Z}_j))$，即 $q_j(\mathbf{Z}_j) = \tilde{p}_j(\mathbf{X}, \mathbf{Z}_j)$，等价于 $\ln q_j(\mathbf{Z}_j) =  \mathbb{E}_{i \neq j} \left (\ln (p(\mathbf{X}, \mathbf{Z})) \right) + \text{const}$来更新$q_j$。
+我们需要注意$\ln(p_j(\mathbf{X}, \mathbf{Z}_j))$是先对非$\mathbf{Z}_j$积分，然后再取$\ln$，而$\ln(\tilde{p}_j(\mathbf{X}, \mathbf{Z}_j))$则是先对非$\mathbf{Z}_j$取$\ln$，再积分。
+% 由Jesen不等式得 $\ln(p_j(\mathbf{X}, \mathbf{Z}_j)) \geqq \ln(\tilde{p}_j(\mathbf{X}, \mathbf{Z}_j))$。
+const 项可以理解为归一化分母取$\ln$之后的值：
+\begin{displaymath}
+q_j(\mathbf{Z}_j) = \frac{ \exp (\mathbb{E}_{i \neq j} \left (\ln (p(\mathbf{X}, \mathbf{Z}) ) \right))}
+{\int_{\mathbf{Z}_j} \exp (\mathbb{E}_{i \neq j} \left( \ln (p(\mathbf{X}, \mathbf{Z})) \right) ) \mathrm{d} \mathbf{Z}_j }
+\end{displaymath}
+\section{Gaussian-Gamma Conjugate Prior}
+我们假设数据$\mathcal{D}=\{ x_1,...,x_n \}$服从参数为$(\mu, \frac{1}{\tau})$的高斯分布，则其似然概率为：
+\begin{displaymath}
+\begin{split}
+p(\mathcal{D}|\mu, \tau) &= \prod_{i=1}^{n}\left ( \frac{\tau}{2 \pi} \right )^{\frac{1}{2}} \exp \left ( \frac{-\tau}{2} (x_i - \mu)^2 \right )\\
+&=\left ( \frac{\tau}{2 \pi} \right )^{\frac{n}{2}}  \exp \left ( \frac{-\tau}{2} (x_i - \mu)^2 \right )\\
+\end{split}
+\end{displaymath}
+我们假设其参数$(\mu, \tau)$分别服从如下的分布：
+\begin{displaymath}
+\begin{split}
+p(\mu | \tau) &= \mathcal{N}(\mu_0, (\lambda_0 \tau)^{-1}) 
+\propto \exp \left ( \frac{-\lambda_0 \tau}{2} (\mu - \mu_0)^2 \right )\\
+p(\tau) &= Gamma(\tau|a_0, b_0) \propto \tau^{a_0-1} \exp^{-b_0 \tau}
+\end{split}
+\end{displaymath}
+则数据的似然为 $p(\mathcal{D}, \mu, \tau) = p(\mathcal{D} | \mu, \tau) p(\mu|\tau) p(\tau)$。
+
+\begin{displaymath}
+\begin{split}
+p(\mu, \tau|\mathcal{D}) &= \frac{p(\mathcal{D}, \mu, \tau)}{p(\mathcal{D})}\\
+& \propto p(\mathcal{D}|\mu, \tau) p(\mu|\tau)p(\tau)\\
+&= \mathcal{N}(\mu_n, (\lambda_n \tau)^{-1})  Gamma(\tau|a_n, b_n)\\
+\text{where:}&\\
+\mu_n &= \frac{\lambda_0 \mu_0 + \bar{n}}{\lambda_0 + n}\\
+\lambda_n &= \lambda_0 +n\\
+a_n &= a_0+\frac{n}{2};\\
+b_n &= b_) + \frac{1}{2}\sum_{i=1}^{n}{(x_i - \bar{x})^2} + \frac{\lambda_0 n (\bar{x}-\mu_0)^2}{2(\lambda_0+n)}\\
+\end{split}
+\end{displaymath}
+
+我们现在假设$\mu$和$\tau$独立且服从分布$q(\mu, \tau) = q_\mu(\mu) q_{\tau}(\tau)$。
+
+则根据VI的更新公式，我们有$\mu$的更新如下：
+\begin{displaymath}
+\begin{split}
+&\ln{q_\mu(\mu)}\\
+&=\mathbb{E}_{\tau}(\ln p(\mathcal{D}, \mu, \tau)) + \text{const}\\
+&=\int_{\tau} q(\tau) (\ln p(\mathcal{D}, \mu, \tau))  \mathrm{d} \tau + \text{const}\\
+&=\int_{\tau} q(\tau) \ln (  p(\mathcal{D} | \mu, \tau) p(\mu|\tau) p(\tau))  \mathrm{d} \tau + \text{const} \\
+&=\int_{\tau} q(\tau) \ln (  p(\mathcal{D} | \mu, \tau) p(\mu|\tau))  \mathrm{d} \tau +\int_{\tau} q(\tau) \ln p(\tau)   \mathrm{d} \tau +  \text{const}\\
+&=\int_{\tau} q(\tau) \ln (  p(\mathcal{D} | \mu, \tau) p(\mu|\tau))  \mathrm{d} \tau +  \text{const}\\
+&=\int_{\tau} q(\tau) \ln \left \{ 
+\left [ \prod_{i=1}^{n} \left ( \frac{\tau}{2 \pi} \right )^{\frac{1}{2}}  \exp \left ( \frac{-\tau}{2} (x_i - \mu)^2 \right ) \right ]
+\left [ \left ( \frac{\lambda_0 \tau}{2 \pi} \right )^{\frac{1}{2}}  \exp \left ( \frac{-\lambda_0 \tau}{2} ( \mu - \mu_0)^2 \right ) \right ]
+\right \}  \mathrm{d} \tau +  \text{const}\\
+&=\int_{\tau} q(\tau)  \left \{ 
+\left [ \sum_{i=1}^{n} \left ( \frac{-\tau}{2} (x_i - \mu)^2 \right ) +
+\frac{-\lambda_0 \tau}{2} ( \mu - \mu_0)^2 \right ]
+\right \}  \mathrm{d} \tau +  \text{const}\\
+&=   \frac{-1}{2} 
+\left [ \sum_{i=1}^{n} (x_i - \mu)^2 +
+\lambda_0 ( \mu - \mu_0)^2 \right ]
+\int_{\tau} q(\tau) \tau  \mathrm{d} \tau +  \text{const}\\
+&=   \frac{-1}{2} 
+\left [ \sum_{i=1}^{n} (x_i - \mu)^2 +
+\lambda_0 ( \mu - \mu_0)^2 \right ]
+\mathbb{E}_{q_\tau} [\tau] +  \text{const}\\
+\end{split}
+\end{displaymath}
+其中：
+\begin{displaymath}
+\begin{split}
+&\left [ \sum_{i=1}^{n} (x_i - \mu)^2  \right ]  + \left [ \lambda_0 ( \mu - \mu_0)^2 \right ]\\
+&= n \mu^2 -2n\mu\bar{x} + \lambda_0 \mu^2 - 2\lambda_0\mu_0\mu + const \\
+&= (n+\lambda_0)\mu^2 -2 \mu (n\bar{x}+\lambda_0\mu_0) + const\\
+&= (n+\lambda_0) \left( \mu ^2 - \frac{2 \mu (n\bar{x}+\lambda_0\mu_0)}{n+\lambda_0} \right) +const\\
+&= (n+\lambda_0) \left( \mu - \frac{n\bar{x}+\lambda_0\mu_0}{n+\lambda_0} \right) ^2 + const\\
+\end{split}
+\end{displaymath}
+故而：
+\begin{displaymath}
+\begin{split}
+&\ln{q_\mu(\mu)}\\
+&=   \frac{-1}{2} 
+\left [ \sum_{i=1}^{n} (x_i - \mu)^2  +
+\lambda_0 ( \mu - \mu_0)^2 \right ]
+\mathbb{E}_{q_\tau} [\tau] +  \text{const}\\
+&= \frac{- \mathbb{E}_{q_\tau} [\tau]  (n+\lambda_0)}{2} 
+\left( \mu - \frac{n\bar{x}+\lambda_0\mu_0}{n+\lambda_0} \right) ^2
++  \text{const}\\
+\end{split}
+\end{displaymath}
+
+假设$q_\mu(\mu)$服从高斯分布$\mathcal{N}(\mu | \mu_n, \lambda_n^{-1})$，则：
+\begin{displaymath}
+\begin{split}
+\mu_n &= \frac{n\bar{x}+\lambda_0\mu_0}{n+\lambda_0}\\
+\lambda_n &= \mathbb{E}_{q_\tau} [\tau](n+\lambda_0)\\
+\end{split}
+\end{displaymath}
+
+同样的，我们对$\tau$的更新如下：
+\begin{displaymath}
+\begin{split}
+&\ln{q_\tau(\tau)}\\
+&=\mathbb{E}_{\mu}(\ln p(\mathcal{D}, \mu, \tau)) + \text{const}\\
+&=\int_{\mu} q(\mu) (\ln p(\mathcal{D}, \mu, \tau))  \mathrm{d} \mu + \text{const}\\
+&=\int_{\mu} q(\mu) \ln (  p(\mathcal{D} | \mu, \tau) p(\mu|\tau) p(\tau))  \mathrm{d} \mu + \text{const} \\
+&=\int_{\mu} q(\mu) \ln (  p(\mathcal{D} | \mu, \tau) p(\mu|\tau) p(\tau))  \mathrm{d} \mu + \text{const} \\
+&=\int_{\mu} q(\mu) \left \{
+\begin{matrix} 
+\underbrace { 
+\left (
+\frac{n}{2}\ln{\tau} - \frac{\tau}{2} \sum_{i=1}^{n} (x_i - \mu)^2 
+\right ) 
+} \\
+\ln p(\mathcal{D} | \mu, \tau)
+\end{matrix} +
+\begin{matrix} 
+\underbrace { 
+\left (
+\frac{-\lambda_0\tau}{2}(\mu-\mu_0)^2
+\right ) 
+} \\
+\ln p(\mu |\tau)
+\end{matrix} +
+\begin{matrix} 
+\underbrace { 
+\left (
+(a_0-1)\ln(\tau)-b_0\tau
+\right ) 
+} \\
+\ln p(\tau)
+\end{matrix} \right \}
+ \mathrm{d} \mu + \text{const} \\
+&= \frac{n}{2}\ln{\tau}  +  (a_0-1)\ln(\tau)-b_0\tau - \frac{\tau}{2}
+\int_{\mu} q(\mu)   \left \{
+\sum_{i=1}^{n} (x_i - \mu)^2 + \lambda_0 (\mu-\mu_0)^2
+ \right \} \mathrm{d} \mu + \text{const} \\
+&= \left ( 
+\begin{matrix} 
+\underbrace { (\frac{n}{2} +a_0 )} \\
+a_n
+\end{matrix}
+-1 \right) \ln(\tau)
+-\tau \left (
+\begin{matrix} 
+\underbrace {
+ b_0 + \frac{1}{2}
+\int_{\mu} q(\mu)   \left \{
+\sum_{i=1}^{n} (x_i - \mu)^2 + \lambda_0 (\mu-\mu_0)^2
+ \right \} \mathrm{d} \mu}\\
+b_n
+\end{matrix}
+\right) + const
+\end{split}
+\end{displaymath}
+其中$b_n$可重写为：
+\begin{displaymath}
+\begin{split}
+b_n &=  b_0 + \frac{1}{2} \int_{\mu} q(\mu)   \left \{ \sum_{i=1}^{n} (x_i - \mu)^2 + \lambda_0 (\mu-\mu_0)^2 \right \} \mathrm{d} \mu \\
+&=  b_0 + \frac{1}{2} \int_{\mu} q(\mu)   \left \{ 
+-2 \mu n \bar{x} + n \mu^2 + \lambda_0 \mu ^2 -2 \lambda_0 \mu_0 \mu + \sum_{i=1}^{n}x_i^2 + \lambda_0 \mu_0^2
+\right \} \mathrm{d} \mu \\
+&=  b_0 + \frac{1}{2} \left \{ \int_{\mu} q(\mu)   \left \{ 
+-2 \mu n \bar{x} + n \mu^2 + \lambda_0 \mu ^2 -2 \lambda_0 \mu_0 \mu 
+\right \} \mathrm{d} \mu + \sum_{i=1}^{n}x_i^2 + \lambda_0 \mu_0^2 \right \} \\
+&=  b_0 + \frac{1}{2} \left \{
+(n+\lambda_0) \mathbb{E}_{q_\mu[\mu^2]} - 2(n\bar{x}+\lambda_0\mu_0)\mathbb{E}_{q_\mu}[\mu]
++ \sum_{i=1}^{n}x_i^2 + \lambda_0 \mu_0^2 \right \} \\
+\end{split}
+\end{displaymath}
+
+\section{广义期望最大化（Generalized Expectation Maximization）}
+
+http://mplab.ucsd.edu/tutorials/EM.pdf
+
+
+

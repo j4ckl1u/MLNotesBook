@@ -1,0 +1,125 @@
+% !Mode:: "TeX:UTF-8"
+
+\section{PLSA}
+
+
+样本为词和文档的一个pair $<w,d>$，隐变量为topic $z$。似然函数的计算为：
+\begin{displaymath}
+\begin{split}
+\ell &= \sum_{w,d}{log(p(w,d))}\\
+&= \sum_{w,d}{log(p(w|d)) + log(p(d))}\\
+&= \sum_{w,d}{log(\sum_z{p(w,z|d)})+ log(p(d))}\\
+&= \sum_{w,d}{log(\sum_z{p(w|z)p(z|d)})+ log(p(d))}
+\end{split}
+\end{displaymath} 
+
+引入隐变量$\mathcal{Q}(z)$，并应用Jessen不等式得：
+\begin{displaymath}
+\begin{split}
+\ell' &= \sum_{w,d}{log(\sum_z{p(w|z)p(z|d)})}\\
+&=\sum_{w,d}{log(\sum_z{\frac{p(w|z)p(z|d)}{\mathcal{Q}(z)}*\mathcal{Q}(z)})}\\
+&\geq \sum_{w,d}{\sum_z{\mathcal{Q}(z)*log(\frac{p(w|z)p(z|d)}{\mathcal{Q}(z)}}))}
+\end{split}
+\end{displaymath} 
+
+Jessen不等式成立的条件为 $\frac{p(w|z)p(z|d)}{\mathcal{Q}(z)}$与$z$无
+关：
+\begin{displaymath}
+\begin{split}
+\frac{p(w|z)p(z|d)}{\mathcal{Q}(z)}&=C_{w,d}\\
+\sum_z{p(w|z)p(z|d)}=p(w|d) &=\sum_z{C_{w,d}*\mathcal{Q}(z)}=C_{w,d}\\
+p(w|d)=C_{w,d} \Longrightarrow
+\mathcal{Q}(z)&=\frac{p(w|z)p(z|d)}{p(w|d)} = p(z|w,d)
+\end{split}
+\end{displaymath} 
+从而得到E步的更新公式:
+\begin{displaymath}
+\begin{split}
+p(z|w,d) = \frac{p(w|z)p(z|d)}{p(w|d)}
+\end{split}
+\end{displaymath} 
+经过E步得到$p(z|w,d)$后，M步将最大化Jessen不等式得到的似然函数的下界。
+由于$p(z|w,d)$已知，故公式可化为：
+\begin{displaymath}
+\begin{split}
+\mathop{\arg\max}_{p(w|z),p(z|d)} &\big\{
+  \sum_{w,d}{
+            \sum_z{
+                   p(z|w,d)*log(
+                                \frac{p(w|z)p(z|d)}{p(z|w,d)}
+                                )
+                  }
+           } 
+\big\}\\
+=\mathop{\arg\max}_{p(w|z),p(z|d)} &\big\{
+  \sum_{w,d}{\sum_z{p(z|w,d)*[log(p(w|z))+log(p(z|d)) -log(p(z|w,d))]}} 
+\big\}\\
+=\mathop{\arg\max}_{p(w|z),p(z|d)} &\big\{
+  \sum_{w,d}{
+            \sum_z{p(z|w,d)*[log(p(w|z))+log(p(z|d))]
+        -p(z|w,d)*log(p(z|w,d))}} 
+\big\}\\
+=\mathop{\arg\max}_{p(w|z),p(z|d)} &\big\{
+  \sum_{w,d}{
+            \sum_z{
+                   p(z|w,d)*[log(p(w|z))+log(p(z|d))]
+                  }
+           } 
+\big\}
+\end{split}
+\end{displaymath} 
+
+object to:
+\begin{displaymath}
+\begin{split}
+\sum_w{p(w|z)} &= 1\\
+\sum_z{p(z|d)} &= 1
+\end{split}
+\end{displaymath} 
+
+引入拉格朗日算子$\lambda_z$和$\lambda_d$，将约束极值问题转换为非约束极
+值问题：
+\begin{displaymath}
+\begin{split}
+\mathop{\arg\max}_{p(w|z),p(z|d)} &\big\{
+  \sum_{w,d}{
+            \sum_z{
+                   p(z|w,d)*[log(p(w|z))+log(p(z|d))]
+                  }
+           }\\
+    &-\sum_z{\lambda_z[\sum_w{p(w|z)}-1]}
+             -\sum_d{\lambda_d[\sum_z{p(z|d)}-1]}
+\big\}
+\end{split}
+\end{displaymath}
+
+分别对$p(w|z)$和$p(z|d)$求导得到$\lambda_z$和$\lambda_d$:
+\begin{displaymath}
+\begin{aligned}
+\sum_d{p(z|w,d)} &= \lambda_z*p(w|z)\\
+\sum_w{p(z|w,d)} &= \lambda_d*p(z|d)\\
+\end{aligned} \} \Longrightarrow
+\{
+\begin{aligned}
+\lambda_z &= \sum_w{\sum_d{p(z|w,d)}}\\
+\lambda_d &= \sum_z{\sum_w{p(z|w,d)}}
+\end{aligned}
+\end{displaymath} 
+
+从而得到$p(w|z)$和$p(z|d)$在M步的更新公式：
+\begin{displaymath}
+\begin{split}
+p(w|z) &= \frac{\sum_d{p(z|w,d)}}{\lambda_z}
+=\frac{
+          \sum_d{p(z|w,d)}
+        }{
+           \sum_w{
+                 \sum_d{p(z|w,d)}
+                }
+        }\\
+p(z|d) &= \frac{\sum_w{p(z|w,d)}}{\lambda_d}
+= \frac{\sum_w{p(z|w,d)}}{\sum_z{\sum_w{p(z|w,d)}}}
+\end{split}
+\end{displaymath} 
+
+

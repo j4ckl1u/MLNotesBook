@@ -1,19 +1,45 @@
-\documentclass[ebook,12pt,oneside,openany]{memoir}
-\usepackage[utf8x]{inputenc}
+\documentclass[12pt,a4paper,titlepage]{book}
+\usepackage[a4paper]{geometry}
+
+%\documentclass[ebook,11pt,oneside,openany]{memoir}
 \usepackage[english]{babel}
-\usepackage{url}
-
-% for placeholder text
+\usepackage{CJKutf8} 
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{subfig}
+ \usepackage{fancybox}
+\usepackage{framed}
 \usepackage{lipsum}
+\usepackage{color}
+\usepackage{wrapfig}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{tikz}
+\usepackage[boxed,linesnumbered,algochapter]{algorithm2e}  
 
-\title{\LaTeX{} ePub Template}
-\author{A Author}
+\graphicspath{{figures/}} 
+\newcommand*{\vv}[1]{\vec{\mkern0mu#1}}
+\renewcommand{\baselinestretch}{1.5} 
+\title{机器学习中的那些证明}
+\author{Shujie Liu (j4ckl1u@gmail.com)}
 
 \begin{document}
+\begin{CJK*}{UTF8}{gbsn} 
 \maketitle
-
-Once upon a time\ldots This document shows how you can get ePub-like formatting in \LaTeX{} with the \verb|memoir| document class. You can't yet export directly to ePub from writeLaTeX, but you can download the source and run it through a format conversion tool, such as \verb|htlatex| to get HTML, and then go from HTML to ePub with a tool like Sigil or Calibre. See \url{http://tex.stackexchange.com/questions/16569} for more advice. And they lived happily ever after.
-
-\lipsum
-
+\include{body/Distributions}
+\include{body/SVM}
+\include{body/Entropy}
+\include{body/EM_GMM}
+\include{body/VI}
+\include{body/TopicModels}
+\include{body/StochasticProcess}
+\include{body/BFGS}
+\include{body/HMM_CRF}
+\include{body/DL}
+\include{body/GAN}
+\include{body/VAE}
+\include{body/Reparameterization}
+\end{CJK*}
 \end{document}
