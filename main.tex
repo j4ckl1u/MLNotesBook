@@ -18,6 +18,7 @@
 \usepackage{stmaryrd}
 \usepackage{tikz}
 \usepackage[boxed,linesnumbered,algochapter]{algorithm2e}  
+\usepackage[outdir=./figures]{epstopdf}
 
 \graphicspath{{figures/}} 
 \newcommand*{\vv}[1]{\vec{\mkern0mu#1}}
@@ -28,6 +29,10 @@
 \begin{document}
 \begin{CJK*}{UTF8}{gbsn} 
 \maketitle
+
+\tableofcontents
+\newpage
+
 \include{body/Distributions}
 \include{body/SVM}
 \include{body/Entropy}
